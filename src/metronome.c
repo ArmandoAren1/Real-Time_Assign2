@@ -26,18 +26,20 @@ typedef union {
 } my_message_t;
 
 struct signature {
-
+	int bpm;
+	int tst;
+	int tsb;
 } typedef signature_t;
 
-DataTableRow t[] = {
-{2, 4, 4, "|1&2&"},
-{3, 4, 6, "|1&2&3&"},
-{4, 4, 8, "|1&2&3&4&"},
-{5, 4, 10, "|1&2&3&4-5-"},
-{3, 8, 6, "|1-2-3-"},
-{6, 8, 6, "|1&a2&a"},
-{9, 8, 9, "|1&a2&a3&a"},
-{12, 8, 12, "|1&a2&a3&a4&a"}};
+//DataTableRow t[] = {
+//{2, 4, 4, "|1&2&"},
+//{3, 4, 6, "|1&2&3&"},
+//{4, 4, 8, "|1&2&3&4&"},
+//{5, 4, 10, "|1&2&3&4-5-"},
+//{3, 8, 6, "|1-2-3-"},
+//{6, 8, 6, "|1&a2&a"},
+//{9, 8, 9, "|1&a2&a3&a"},
+//{12, 8, 12, "|1&a2&a3&a4&a"}};
 
 int io_read(resmgr_context_t *ctp, io_read_t *msg, RESMGR_OCB_T *ocb)
 {
@@ -79,10 +81,13 @@ int io_write(resmgr_context_t *ctp, io_write_t *msg, RESMGR_OCB_T *ocb)
 	    if( msg->i.nbytes == ctp->info.msglen - (ctp->offset + sizeof(*msg) ))
 	    {
 	        /* have all the data */
+	    signature_t sig;
 		char *buf;
 		char *alert_msg;
 		int i, pauseAmount;
 		buf = (char *)(msg+1);
+
+		strcpy(data, buf);
 
 		// did the client send ALERT
 		if(strstr(buf, "pause") != NULL){
@@ -98,13 +103,11 @@ int io_write(resmgr_context_t *ctp, io_write_t *msg, RESMGR_OCB_T *ocb)
 			}
 		} else if (strstr(buf, "info") != NULL){
 			//metronome [<bpm> beats/min, time signature <ts-top>/<ts-bottom>
-			//// ////////
-			printf(data, "% d beats/min, time signature %d/%d", tst, tsd );
-			// TODO write the info here
+			////
+			printf(data, "%d beats/min, time signature %d/%d", sig.tst, sig.tsb);
+
 		} else if (strstr(buf, "quit") != NULL){
 			MsgSendPulse(server_coid, SchedGet(0,0,NULL), QUIT_PULSE_CODE, 0);
-		} else {
-			strcpy(data, buf);
 		}
 
 		nb = msg->i.nbytes;
@@ -132,11 +135,11 @@ void *metronimeThread(/*void* argc*/){ // client
    struct itimerspec       itime;
    timer_t                 timer_id;
    int                     rcvid;
+   signature_t 			   sig;
    my_message_t            msg;
    pthread_attr_t 		   attr;
    int 					   nThreads;
    name_attach_t 		   *attach;
-
 
 //	if ((attach = name_attach()) == NULL) {
 //		return EXIT_FAILURE;
@@ -144,7 +147,7 @@ void *metronimeThread(/*void* argc*/){ // client
 
    event.sigev_notify = SIGEV_PULSE;
    event.sigev_coid = ConnectAttach(ND_LOCAL_NODE, 0, attach->chid, _NTO_SIDE_CHANNEL, 0);
-   //event.sigev_priority = getprio(0);
+   //event.sigev_priority =
    event.sigev_code = MY_PULSE_CODE;
    timer_create(CLOCK_REALTIME, &event, &timer_id);
 
@@ -154,8 +157,7 @@ void *metronimeThread(/*void* argc*/){ // client
     * 0.5 sec/beat * 2 beat/measure = 1 second per measure
     * (1 sec) / (4 intervals) = 0.25 sec /interval
     * */
-
-
+   double sec = sec / (double)sig.bpm;
 
 
    itime.it_value.tv_sec = 1;
@@ -173,7 +175,7 @@ void *metronimeThread(/*void* argc*/){ // client
     */
 
    for (;;) {
-       rcvid = MsgReceive(chid, &msg, sizeof(msg), NULL);
+       rcvid = MsgReceive(attach->chid, &msg, sizeof(msg), NULL);
        if (rcvid == 0) { /* we got a pulse */
             if (msg.pulse.code == MY_PULSE_CODE) {
                 printf("we got a pulse from our timer\n");
