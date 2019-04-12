@@ -88,25 +88,22 @@ int io_write(resmgr_context_t *ctp, io_write_t *msg, RESMGR_OCB_T *ocb) {
 		strcpy(data, buf);
 
 		// did the client send ALERT
-		if (strstr(buf, "pause") != NULL) {
-			for (i = 0; i < 2; i++) {
-				alert_msg = strsep(&buf, " ");
-			}
-			pauseAmount = atoi(alert_msg);
+		alert_msg = strsep(&buf, " ");
+		if (strstr(alert_msg, "pause") != NULL) {
+			pauseAmount = atoi(strsep(&buf, " "));
 			if (pauseAmount >= 1 && pauseAmount <= 9) {
 				//FIXME :: replace getprio() with SchedGet()
 				MsgSendPulse(server_coid, SchedGet(0, 0, NULL),
-				_PULSE_CODE_MINAVAIL, pauseAmount);
+						MY_PULSE_CODE, pauseAmount);
 			} else {
 				printf("Integer is not between 1 and 9.\n");
 			}
-		} else if (strstr(buf, "info") != NULL) {
+		} else if (strstr(alert_msg, "info") != NULL) {
 			//metronome [<bpm> beats/min, time signature <ts-top>/<ts-bottom>
 			////
-			printf(data, "%d beats/min, time signature %d/%d", sig.tst,
-					sig.tsb);
+			sprintf(data, "%d beats/min, time signature %d/%d", sig.bpm, sig.tst, sig.tsb);
 
-		} else if (strstr(buf, "quit") != NULL) {
+		} else if (strstr(alert_msg, "quit") != NULL) {
 			MsgSendPulse(server_coid, SchedGet(0, 0, NULL), QUIT_PULSE_CODE, 0);
 		}
 
@@ -244,8 +241,7 @@ int main(int argc, char *argv[]) { // server
 
 	iofunc_attr_init(&ioattr, S_IFCHR | 0666, NULL, NULL);
 
-	id = resmgr_attach(dpp, NULL, "/dev/local/metronome", _FTYPE_ANY, NULL,
-			&connect_funcs, &io_funcs, &ioattr);
+	id = resmgr_attach(dpp, NULL, "/dev/local/metronome", _FTYPE_ANY, NULL, &connect_funcs, &io_funcs, &ioattr);
 
 	pthread_attr_init(&attr);
 	pthread_create(NULL, &attr, &metronomeThread, &signature);
