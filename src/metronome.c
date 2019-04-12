@@ -93,8 +93,7 @@ int io_write(resmgr_context_t *ctp, io_write_t *msg, RESMGR_OCB_T *ocb) {
 			pauseAmount = atoi(strsep(&buf, " "));
 			if (pauseAmount >= 1 && pauseAmount <= 9) {
 				//FIXME :: replace getprio() with SchedGet()
-				MsgSendPulse(server_coid, SchedGet(0, 0, NULL),
-						MY_PULSE_CODE, pauseAmount);
+				MsgSendPulse(server_coid, SchedGet(0, 0, NULL), MY_PULSE_CODE, pauseAmount);
 			} else {
 				printf("Integer is not between 1 and 9.\n");
 			}
@@ -140,8 +139,7 @@ void *metronomeThread(void* argc) {			// client
 	chid = ChannelCreate(0);
 
 	event.sigev_notify = SIGEV_PULSE;
-	event.sigev_coid = ConnectAttach(ND_LOCAL_NODE, 0, chid,
-	_NTO_SIDE_CHANNEL, 0);
+	event.sigev_coid = ConnectAttach(ND_LOCAL_NODE, 0, chid, _NTO_SIDE_CHANNEL, 0);
 	//event.sigev_priority = SchedGet(0, 0, NULL);
 	event.sigev_code = MY_PULSE_CODE;
 	timer_create(CLOCK_REALTIME, &event, &timer_id);
@@ -219,8 +217,7 @@ int main(int argc, char *argv[]) { // server
 	int id;
 
 	if (argc != 4) {
-		perror(
-				"Invalid! you must have 4 arguments (beats-per-minute) (time-signature-top) (time-signature-bottom)");
+		perror("Invalid! you must have 4 arguments (beats-per-minute) (time-signature-top) (time-signature-bottom)");
 		return EXIT_FAILURE;
 	}
 
